@@ -119,7 +119,7 @@ Garantir continuidade do cadastro e controle de ocorrências quando o SIOPM esti
 ### 4.3 Instruções de Uso
 
 1. **Acesso ao sistema**
-- Entrar no Workspace (`/workspace`).
+- Entrar no Workspace (`cobom.cbi1.org`).
 - Clicar em **Contingência**.
 - Em caso de redirecionamento, efetuar login e retornar ao app.
 
