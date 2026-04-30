@@ -1,407 +1,225 @@
-Documentação de Configuração do Sistema Budibase + Supabase Local
+# COBOM Hub - Informativo de Utilização das Ferramentas
 
-📋 Índice
+Documento oficial de orientação para uso dos aplicativos internos do COBOM.
 
-1. Visão Geral
-2. Pré-requisitos
-3. Estrutura do Projeto
-4. Configuração Inicial
-5. Configuração do Docker Swarm
-6. Configuração SSL
-7. Implantação do Sistema
-8. Verificação e Testes
-9. Gerenciamento do Swarm
-10. Solução de Problemas
+## Sumário
+
+- [1. Visão Geral](#1-visão-geral)
+- [2. Acesso Rápido](#2-acesso-rápido)
+- [3. Aplicativo: Controle de Viaturas](#3-aplicativo-controle-de-viaturas)
+- [4. Aplicativo: Atendimento em Modo de Contingência](#4-aplicativo-atendimento-em-modo-de-contingência)
+- [5. Aplicativo: GeoLoc193](#5-aplicativo-geoloc193)
 
 ---
 
-🎯 Visão Geral
+## 1. Visão Geral
 
-Este documento descreve a configuração de um sistema completo com:
+Estão disponíveis para uso interno no COBOM três aplicativos:
 
-· Budibase para criação de aplicativos
-· Supabase local com PostgreSQL, Studio e Auth
-· Nginx com SSL e domínio local cobom.app
-· Docker Swarm para distribuição em duas máquinas
+1. **Controle de Viaturas**  
+Ferramenta para uso dos Controladores com objetivo de realizar a gestão completa da frota de viaturas de serviço sob seu controle.
 
----
+2. **Atendimento em modo de Contingência**  
+Sistema interno offline que os bombeiros do COBOM poderão utilizar para cadastrar e controlar ocorrências nas situações em que o SIOPM esteja inoperante.
 
-🛠️ Pré-requisitos
-
-🔧 Software Necessário
-
-```bash
-# Em ambas as máquinas
-sudo apt-get update && sudo apt-get upgrade -y
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-🌐 Configuração de Rede
-
-```bash
-# Configurar hosts em ambas as máquinas
-sudo nano /etc/hosts
-
-# Adicionar as linhas:
-127.0.0.1   cobom.app
-127.0.0.1   studio.cobom.app
-# Para acesso entre máquinas, usar IPs reais
-```
+3. **GeoLoc193**  
+Ferramenta para os atendentes obterem a localização do solicitante em tempo real durante o atendimento, quando não for possível pela ligação.
 
 ---
 
-📁 Estrutura do Projeto
+## 2. Acesso Rápido
 
-```
-budibase-supabase-local/
-├── docker-swarm.yml
-├── nginx/
-│   ├── nginx.conf
-│   ├── ssl/
-│   │   ├── cobom.app.crt
-│   │   └── cobom.app.key
-├── supabase/
-│   └── scripts/
-│       └── init-supabase.sql
-├── config/
-│   └── budibase.env
-└── scripts/
-    ├── init-swarm.sh
-    ├── deploy.sh
-    └── generate-passwords.sh
-```
+- Entrada principal: `https://cobom.cbi1.org`
+- Aplicativo Controle de Viaturas: `https://cobom.cbi1.org/apps/controle-viaturas`
+- Aplicativo Contingência Atendente: `https://cobom.cbi1.org/apps/contingencia-atendente`
+- Aplicativo Contingência Controlador: `https://cobom.cbi1.org/apps/contingencia-controlador`
+- Aplicativo GeoLoc193 para o Atendente: `https://cobom.cbi1.org/apps/geoloc193/atendente`
+- Aplicativo GeoLoc193 para o Solicitante: `https://sos193.org`
+
+Requisito de acesso:
+- Estas ferramentas rodam em rede interna do COBOM, portanto sem dependência de internet e sem exposição para o público externo. exceto o https://sos193.org que é dominio público e precisa ser acessado pelo solicitante para compartilhar a localização da ocorrência.
 
 ---
 
-⚙️ Configuração Inicial
+## 3. Aplicativo: Controle de Viaturas
 
-1. Clonar/Criar Estrutura
+### 3.1 Objetivo
 
-```bash
-mkdir budibase-supabase-local
-cd budibase-supabase-local
-mkdir -p nginx/ssl supabase/scripts config scripts
-```
+Permitir ao Controlador manter visão operacional e atualização em tempo real das viaturas sob seu GB, com rastreabilidade das ações.
 
-2. Gerar Senhas Seguras
+### 3.2 Quando usar
 
-```bash
-chmod +x scripts/generate-passwords.sh
-./scripts/generate-passwords.sh
-```
+- Início de turno para conferência das Estações e VIaturas
+- Durante o atendimento para atualização de status de viaturas
+- Troca de turno para passagem de situação operacional
 
-3. Configurar Variáveis de Ambiente
+### 3.3 Instruções de Uso
 
-Edite config/budibase.env conforme necessário:
+1. **Acesso ao sistema**
+- Entrar no Workspace (`cobom.cbi1.org`).
+- Realizar login conforme as credenciais de cada controlador (disponível na supervisão)
+- Clicar em **Controle de Viaturas**.
 
-```env
-BB_ADMIN_EMAIL=admin@cobom.app
-BB_ADMIN_PASSWORD=sua_senha_admin_forte
-```
+2. **Login e validação de perfil**
+- Confirmar no topo da tela se o usuário logado está correto.
+- Verificar se o perfil está com permissão operacional (edição) quando necessário.
 
----
+3. **Configuração inicial do turno**
+- Selecionar o **GB** correto.
+- Identificar o **Controlador (RE)** ativo no turno.
+- Confirmar que painel e filtros foram atualizados para a área correta.
 
-🔄 Configuração do Docker Swarm
+4. **Navegação principal**
+- Usar busca por prefixo, estação, cidade ou texto livre.
+- Aplicar filtros por status, modalidade e critérios operacionais.
+- Abrir cards de estação e viaturas para detalhamento.
 
-1. Inicializar Swarm na Máquina Principal
+5. **Funções operacionais disponíveis**
+- Atualizar status da viatura (ex.: disponível, local, QTI, regressando, reserva, baixado).
+- Registrar e editar observações operacionais.
+- Atualizar `QSA Rádio` e `QSA Zello`.
+- Marcar teste realizado.
+- Indicar DEJEM quando aplicável.
+- Transferir viatura entre estações.
+- Ativar ou desativar viatura na estação.
+- Configurar e desfazer revezamento.
+- Inserir, editar e consultar anotações de serviço.
+- Consultar logs para rastreabilidade de ações.
 
-```bash
-chmod +x scripts/init-swarm.sh
-./scripts/init-swarm.sh
-```
+6. **Rotina durante o atendimento**
+- Atualizar status imediatamente após cada mudança operacional.
+- Evitar backlog de atualização para o fim do turno.
+- Registrar somente observações objetivas e úteis ao próximo operador.
 
-2. Adicionar Segunda Máquina
+7. **Finalização do uso**
+- Revisar pendências de viaturas sem status coerente.
+- Conferir se houve registro das principais ocorrências do turno.
+- Garantir que troca de controlador (se houver) foi realizada.
+- Encerrar sessão conforme protocolo local.
 
-Execute o comando fornecido pelo output do script anterior na segunda máquina.
+### 3.4 Resultado esperado
 
-3. Verificar Nodes
-
-```bash
-docker node ls
-```
-
----
-
-🔐 Configuração SSL
-
-1. Gerar Certificados Autoassinados
-
-```bash
-mkdir -p nginx/ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout nginx/ssl/cobom.app.key \
-  -out nginx/ssl/cobom.app.crt \
-  -subj "/CN=cobom.app"
-```
-
-2. Para Certificados Válidos (Opcional)
-
-Use Certbot ou importe certificados de uma CA válida para a pasta nginx/ssl/.
+- Painel atualizado com situação real da frota
+- Histórico confiável para auditoria e continuidade entre turnos
 
 ---
 
-🚀 Implantação do Sistema
+## 4. Aplicativo: Atendimento em Modo de Contingência
 
-1. Implantar Stack Completa
+### 4.1 Objetivo
 
-```bash
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
-```
+Garantir continuidade do cadastro e controle de ocorrências quando o SIOPM estiver indisponível.
 
-2. Verificar Status
+### 4.2 Quando usar
 
-```bash
-docker service ls
-docker service ps budibase-supabase_budibase
-docker service ps budibase-supabase_supabase-db
-```
+- Indisponibilidade total do SIOPM
+- Instabilidade prolongada com impacto no atendimento
+- Procedimento determinado pelo comando operacional
 
-3. Acompanhar Logs
+### 4.3 Instruções de Uso
 
-```bash
-docker service logs -f budibase-supabase_budibase
-docker service logs -f budibase-supabase_supabase-db
-```
+1. **Acesso ao sistema**
+- Entrar no Workspace (`/workspace`).
+- Clicar em **Contingência**.
+- Em caso de redirecionamento, efetuar login e retornar ao app.
 
----
+2. **Validação antes de iniciar**
+- Confirmar com a chefia/controle que o cenário é de contingência ativa.
+- Confirmar operador responsável no turno.
 
-✅ Verificação e Testes
+3. **Abertura de ocorrência**
+- Clicar em **Nova Ocorrência**.
+- Preencher os campos mínimos obrigatórios:
+  - identificação do chamado;
+  - local/endereço;
+  - natureza;
+  - horário de abertura;
+  - dados do solicitante quando disponíveis.
 
-1. Testar Acesso aos Serviços
+4. **Gestão da ocorrência em andamento**
+- Registrar despacho de recursos.
+- Atualizar horários relevantes (saída, chegada, desfecho).
+- Registrar evolução do atendimento com objetividade.
+- Atualizar situação da ocorrência (aberta, em atendimento, finalizada).
 
-```bash
-# Testar Budibase
-curl -k https://cobom.app/health
+5. **Funções disponíveis no app**
+- Criar ocorrência.
+- Editar dados da ocorrência em andamento.
+- Atualizar status operacional da ocorrência.
+- Inserir observações cronológicas.
+- Consultar ocorrências abertas e encerradas durante o período de contingência.
 
-# Testar Supabase Studio
-curl -k https://studio.cobom.app
+6. **Encerramento de ocorrência**
+- Registrar desfecho final.
+- Confirmar campos obrigatórios de fechamento.
+- Salvar e validar se a ocorrência foi listada como finalizada.
 
-# Testar conexão com banco
-docker exec -it $(docker ps -q -f name=supabase-db) psql -U postgres -c "\l"
-```
+7. **Finalização do uso no fim da contingência**
+- Revisar se todas as ocorrências abertas foram tratadas corretamente.
+- Consolidar registros conforme protocolo da unidade para retorno ao SIOPM.
+- Encerrar sessão.
 
-2. Acessar Interfaces Web
+### 4.4 Resultado esperado
 
-· Budibase: https://cobom.app
-· Supabase Studio: https://studio.cobom.app
-· Credenciais padrão: admin@cobom.app / senha configurada no .env
-
----
-
-⚡ Gerenciamento do Swarm
-
-Comandos Úteis
-
-```bash
-# Escalar serviços
-docker service scale budibase-supabase_budibase=3
-
-# Ver logs em tempo real
-docker service logs -f budibase-supabase_budibase
-
-# Atualizar serviço
-docker service update --image budibase/budibase:latest budibase-supabase_budibase
-
-# Remover stack
-docker stack rm budibase-supabase
-
-# Ver recursos
-docker node ps
-docker service inspect budibase-supabase_budibase
-```
-
-Monitoramento
-
-```bash
-# Ver uso de recursos
-docker stats
-
-# Ver serviços por node
-docker node ps $(docker node ls -q)
-```
+- Nenhuma ocorrência crítica sem registro
+- Continuidade operacional do COBOM durante falha do sistema principal
 
 ---
 
-🐛 Solução de Problemas
+## 5. Aplicativo: GeoLoc193
 
-Problemas Comuns e Soluções
+### 5.1 Objetivo
 
-1. Erro de Conexão entre Nodes
+Apoiar o atendente na obtenção de localização do solicitante em tempo real, especialmente quando o endereço não puder ser confirmado por voz.
 
-```bash
-# Verificar se todas as portas necessárias estão abertas
-sudo ufw allow 2377/tcp
-sudo ufw allow 7946/tcp
-sudo ufw allow 7946/udp
-sudo ufw allow 4789/udp
-```
+### 5.2 Quando usar
 
-2. Problemas de SSL
+- Solicitante sem referência clara de endereço
+- Situações de pânico, desorientação ou risco iminente
+- Queda de qualidade da ligação com dificuldade de compreensão
 
-```bash
-# Verificar certificados
-openssl x509 -in nginx/ssl/cobom.app.crt -text -noout
+### 5.3 Instruções de Uso
 
-# Testar configuração Nginx
-docker exec -it $(docker ps -q -f name=nginx) nginx -t
-```
+1. **Acesso ao sistema**
+- Entrar no Workspace (`cobom.cbi1.org`).
+- Abrir o aplicativo **GeoLoc193**.
+- Se necessário, autenticar com usuário no seguinte padrão: usuário => pa101@cbi1.org senha => atendentepa101 .
 
-3. Serviços Não Iniciam
+2. **Preparação do atendimento**
+- Manter chamada ativa com o solicitante.
+- Confirmar nome e algum dado mínimo de validação.
+- Informar que será feito procedimento de compartilhamento de localização para agilizar o socorro.
 
-```bash
-# Ver logs detalhados
-docker service logs --tail 100 budibase-supabase_budibase
+3. **Coleta da localização**
+- Acionar o fluxo de localização no app.
+- Orientar o solicitante a concluir a autorização de compartilhamento acessando no seu navegador a pagina sos193.org.
+- Aguardar atualização do ponto no mapa.
 
-# Ver eventos do serviço
-docker service events budibase-supabase_budibase
-```
+4. **Validação da posição obtida**
+- Confirmar com o solicitante pontos de referência próximos.
+- Verificar coerência da posição no mapa com o relato da ocorrência.
+- Quando houver divergência, repetir validação antes do despacho final.
 
-4. Problemas de Volume
+5. **Funções disponíveis no app**
+- Obter posição em tempo real do solicitante.
+- Visualizar ponto em mapa para apoio ao despacho.
+- Apoiar confirmação de rota/referência para equipes em campo.
 
-```bash
-# Verificar volumes
-docker volume ls
+6. **Uso integrado ao atendimento**
+- Repassar localização validada ao operador de despacho.
+- Registrar no atendimento que a localização foi obtida via GeoLoc193.
+- Manter atualização caso o solicitante esteja em deslocamento.
 
-# Limpar volumes (cuidado!)
-docker volume prune
-```
+7. **Finalização do uso**
+- Confirmar que a localização final foi transmitida com sucesso.
+- Encerrar o fluxo da sessão de localização.
+- Encerrar sessão do sistema ao fim do turno, conforme protocolo local.
 
-5. Rede Overlay
+### 5.4 Resultado esperado
 
-```bash
-# Verificar redes
-docker network ls
-
-# Inspecionar rede
-docker network inspect budibase-network
-```
-
-Comandos de Diagnóstico
-
-```bash
-# Health check completo
-curl -k https://cobom.app/health
-
-# Verificar conectividade entre containers
-docker exec -it $(docker ps -q -f name=budibase) ping supabase-db
-
-# Verificar DNS resolution
-docker exec -it $(docker ps -q -f name=budibase) nslookup supabase-db
-```
+- Redução do tempo de localização da vítima/solicitante
+- Maior assertividade no despacho de recursos
 
 ---
 
-🔄 Backup e Recuperação
-
-Backup de Dados
-
-```bash
-# Backup do PostgreSQL
-docker exec -it $(docker ps -q -f name=supabase-db) pg_dump -U postgres postgres > backup.sql
-
-# Backup de volumes
-docker run --rm -v supabase_data:/source -v $(pwd)/backup:/backup alpine tar czf /backup/supabase_backup.tar.gz /source
-```
-
-Restauração
-
-```bash
-# Restaurar PostgreSQL
-cat backup.sql | docker exec -i $(docker ps -q -f name=supabase-db) psql -U postgres postgres
-
-# Restaurar volume
-docker run --rm -v supabase_data:/target -v $(pwd)/backup:/backup alpine tar xzf /backup/supabase_backup.tar.gz -C /target
-```
-
----
-
-📊 Monitoramento e Logs
-
-Configurar Log Rotation
-
-```bash
-# Configurar driver de logs no Docker daemon
-sudo nano /etc/docker/daemon.json
-
-# Adicionar:
-{
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  }
-}
-```
-
-Monitoramento com cAdvisor (Opcional)
-
-```bash
-docker run -d \
-  --name=cadvisor \
-  --volume=/:/rootfs:ro \
-  --volume=/var/run:/var/run:ro \
-  --volume=/sys:/sys:ro \
-  --volume=/var/lib/docker/:/var/lib/docker:ro \
-  --volume=/dev/disk/:/dev/disk:ro \
-  --publish=8080:8080 \
-  --detach=true \
-  google/cadvisor:latest
-```
-
----
-
-🔒 Segurança
-
-Melhores Práticas
-
-1. Alterar senhas padrão no arquivo .env
-2. Restringir acesso às portas de administração
-3. Configurar firewall adequadamente
-4. Monitorar logs regularmente
-5. Manter imagens atualizadas
-
-Atualizações de Segurança
-
-```bash
-# Atualizar todas as imagens
-docker images | awk 'NR>1 {print $1 ":" $2}' | xargs -L1 docker pull
-
-# Recriar serviços com imagens atualizadas
-docker service update --image budibase/budibase:latest budibase-supabase_budibase
-```
-
----
-
-📞 Suporte
-
-Recursos Úteis
-
-· Documentação Docker Swarm
-· Documentação Budibase
-· Documentação Supabase
-
-Verificação Final
-
-Após implantação, verifique:
-
-· ✅ Todos os serviços estão rodando
-· ✅ SSL funciona corretamente
-· ✅ Acesso via cobom.app e studio.cobom.app
-· ✅ Conexão entre Budibase e Supabase
-· ✅ Replicação entre nodes do Swarm
-
----
-
-Nota: Este setup é para ambiente de desenvolvimento/local. Para produção, considere:
-
-· Certificados SSL válidos
-· Monitoramento mais robusto
-· Backup automatizado
-· Maior segurança de rede
-· Load balancing adicional
-
-Para qualquer problema, consulte a seção de Solução de Problemas ou verifique os logs dos serviços.
+Última atualização: abril/2026.
